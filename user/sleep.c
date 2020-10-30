@@ -1,13 +1,13 @@
 #include "kernel/types.h"
 #include "user/user.h"
 
-int main(int argn, char *argv[]){
-	if(argn != 2){
-		fprintf(2, "must 1 argument for sleep\n");
+int main(int argc, char *argv[]){
+	if(argc < 2){
+		fprintf(2, "2 arguments needed!\n");
 		exit();
 	}
-	int sleepNum = atoi(argv[1]);
-	printf("(nothing happens for a little while)\n");
-	sleep(sleepNum);
+	int n = atoi(argv[1]);        //n是睡眠的时钟周期数
+	printf("Sleep 10\n");
+	sleep(n);
 	exit();
 }
