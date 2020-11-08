@@ -4,49 +4,38 @@
 #include "kernel/fs.h"
 #include "user/user.h"
 
-/*
-	将路径格式化为文件名
-*/
+//返回path最后一个斜杠后的文件名
 char* fmt_name(char *path){
-  static char buf[DIRSIZ+1];
-  char *p;
+    static char buf[DIRSIZ+1];
+    char *p;
+    // Find first character after last slash.
+    for(p=path+strlen(path); p >= path && *p != '/'; p--);
+    p++;
+    memmove(buf, p, strlen(p)+1);
+    return buf;
+}
 
-  // Find first character after last slash.
-  for(p=path+strlen(path); p >= path && *p != '/'; p--);
-  p++;
-  memmove(buf, p, strlen(p)+1);
-  return buf;
-}
-/*
-	系统文件名与要查找的文件名，若一致，打印系统文件完整路径
-*/
-void eq_print(char *fileName, char *findName){
-	if(strcmp(fmt_name(fileName), findName) == 0){
-		printf("%s\n", fileName);
-	}
-}
-/*
-	在某路径中查找某文件
-*/
 void find(char *path, char *findName){
 	int fd;
 	struct stat st;	
 	if((fd = open(path, O_RDONLY)) < 0){
-		fprintf(2, "find: cannot open %s\n", path);
+		fprintf(2, "find: cannot open %s\n", path); //打开文件失败
 		return;
 	}
-	if(fstat(fd, &st) < 0){
-		fprintf(2, "find: cannot stat %s\n", path);
+	if(fstat(fd, &st) < 0){          //通过fstat看指向文件的类型
+		fprintf(2, "find: cannot stat %s\n", path); //失败
 		close(fd);
 		return;
 	}
 	char buf[512], *p;	
 	struct dirent de;
-	switch(st.type){	
-		case T_FILE:
-			eq_print(path, findName);			
+	switch(st.type){	//判断文件类型
+		case T_FILE:    //普通文件
+            if(strcmp(fmt_name(path), findName) == 0){//如果系统文件名与要查找的文件名一致，打印系统文件完整路径
+	    	printf("%s\n", path);
+	        }		
 			break;
-		case T_DIR:
+		case T_DIR:     //目录文件
 			if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
 				printf("find: path too long\n");
 				break;
@@ -54,13 +43,12 @@ void find(char *path, char *findName){
 			strcpy(buf, path);
 			p = buf+strlen(buf);
 			*p++ = '/';
-			while(read(fd, &de, sizeof(de)) == sizeof(de)){
-				//printf("de.name:%s, de.inum:%d\n", de.name, de.inum);
+			while(read(fd, &de, sizeof(de)) == sizeof(de)){//得到其子文件/目录名
 				if(de.inum == 0 || de.inum == 1 || strcmp(de.name, ".")==0 || strcmp(de.name, "..")==0)
 					continue;				
 				memmove(p, de.name, strlen(de.name));
 				p[strlen(de.name)] = 0;
-				find(buf, findName);
+				find(buf, findName);//递归搜索整个目录树
 			}
 			break;
 	}
